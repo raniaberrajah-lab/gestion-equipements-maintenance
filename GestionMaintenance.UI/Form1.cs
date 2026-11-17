@@ -7,6 +7,12 @@ using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using GestionMaintenance;
 using GestionMaintenance.Data;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+
+using Color = System.Drawing.Color;
+using Size = System.Drawing.Size;
 
 namespace GestionMaintenance.UI
 {
@@ -27,7 +33,8 @@ namespace GestionMaintenance.UI
         private static string ObtenirCheminBase()
         {
             string dossierProjet = Path.GetFullPath(
-                Path.Combine(AppContext.BaseDirectory,
+                Path.Combine(
+                    AppContext.BaseDirectory,
                     "..", "..", "..", ".."));
 
             return Path.Combine(dossierProjet, "gestion-maintenance.db");
@@ -48,7 +55,8 @@ namespace GestionMaintenance.UI
 
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(cheminBD)!);
+                Directory.CreateDirectory(
+                    Path.GetDirectoryName(cheminBD)!);
 
                 using var db = CreerContexte();
                 db.Database.Migrate();
@@ -70,9 +78,10 @@ namespace GestionMaintenance.UI
 
         private AppDbContext CreerContexte()
         {
-            var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseSqlite($"Data Source={cheminBD}")
-                .Options;
+            var options =
+                new DbContextOptionsBuilder<AppDbContext>()
+                    .UseSqlite($"Data Source={cheminBD}")
+                    .Options;
 
             return new AppDbContext(options);
         }
@@ -109,11 +118,8 @@ namespace GestionMaintenance.UI
 
             sidebar.Controls.Add(logo);
 
-            AjouterNavigation(sidebar, "Dashboard", 125,
-                AfficherDashboard);
-
-            AjouterNavigation(sidebar, "Équipements", 180,
-                AfficherEquipements);
+            AjouterNavigation(sidebar, "Dashboard", 125, AfficherDashboard);
+            AjouterNavigation(sidebar, "Équipements", 180, AfficherEquipements);
 
             AjouterNavigation(sidebar, "Techniciens", 235,
                 () => AfficherModule("Techniciens"));
@@ -204,7 +210,6 @@ namespace GestionMaintenance.UI
         private void AfficherDashboard()
         {
             contenu.Controls.Clear();
-
             contenu.Controls.Add(CreerTitre("Tableau de bord"));
 
             Label sousTitre = new Label
@@ -297,6 +302,7 @@ namespace GestionMaintenance.UI
 
             carte.Controls.Add(lblTitre);
             carte.Controls.Add(lblValeur);
+
             contenu.Controls.Add(carte);
         }
 
@@ -305,9 +311,7 @@ namespace GestionMaintenance.UI
         private void AfficherEquipements()
         {
             contenu.Controls.Clear();
-
-            contenu.Controls.Add(
-                CreerTitre("Gestion des équipements"));
+            contenu.Controls.Add(CreerTitre("Gestion des équipements"));
 
             Label sousTitre = new Label
             {
@@ -333,21 +337,26 @@ namespace GestionMaintenance.UI
             Button ajouter = CreerBouton(
                 "Ajouter", 355, Color.FromArgb(22, 163, 74));
 
-            Button modifier = CreerBouton(
-                "Modifier", 485, bleu);
+            Button modifier = CreerBouton("Modifier", 485, bleu);
 
             Button supprimer = CreerBouton(
                 "Supprimer", 615, Color.FromArgb(220, 38, 38));
 
+            Button exporter = CreerBouton(
+                "Exporter PDF", 745, Color.FromArgb(185, 28, 28));
+
             ajouter.Click += BtnAjouter_Click;
             modifier.Click += BtnModifier_Click;
             supprimer.Click += BtnSupprimer_Click;
+            exporter.Click += BtnExporterPdf_Click;
 
             contenu.Controls.Add(ajouter);
             contenu.Controls.Add(modifier);
             contenu.Controls.Add(supprimer);
+            contenu.Controls.Add(exporter);
 
             tableau.Location = new Point(35, 175);
+
             tableau.Size = new Size(
                 Math.Max(700, contenu.ClientSize.Width - 70),
                 Math.Max(300, contenu.ClientSize.Height - 210));
@@ -408,7 +417,6 @@ namespace GestionMaintenance.UI
             };
 
             bouton.FlatAppearance.BorderSize = 0;
-
             return bouton;
         }
 
@@ -436,15 +444,13 @@ namespace GestionMaintenance.UI
                 tableau.Columns["Localisation"].HeaderText = "Localisation";
 
             if (tableau.Columns.Contains("DateAcquisition"))
-                tableau.Columns["DateAcquisition"].HeaderText =
-                    "Date acquisition";
+                tableau.Columns["DateAcquisition"].HeaderText = "Date acquisition";
 
             if (tableau.Columns.Contains("CoutAcquisition"))
                 tableau.Columns["CoutAcquisition"].HeaderText = "Coût";
 
             if (tableau.Columns.Contains("SpecialiteRequise"))
-                tableau.Columns["SpecialiteRequise"].HeaderText =
-                    "Spécialité";
+                tableau.Columns["SpecialiteRequise"].HeaderText = "Spécialité";
 
             if (tableau.Columns.Contains("Statut"))
                 tableau.Columns["Statut"].HeaderText = "Statut";
@@ -456,13 +462,16 @@ namespace GestionMaintenance.UI
 
             var resultat = listeEquipements
                 .Where(x =>
-                    x.Reference.Contains(
+                    (x.Reference ?? "").Contains(
                         terme, StringComparison.OrdinalIgnoreCase) ||
-                    x.Designation.Contains(
+
+                    (x.Designation ?? "").Contains(
                         terme, StringComparison.OrdinalIgnoreCase) ||
-                    x.Marque.Contains(
+
+                    (x.Marque ?? "").Contains(
                         terme, StringComparison.OrdinalIgnoreCase) ||
-                    x.Localisation.Contains(
+
+                    (x.Localisation ?? "").Contains(
                         terme, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
@@ -486,7 +495,6 @@ namespace GestionMaintenance.UI
             if (equipement.Statut == nouveauStatut)
                 return;
 
-            // On utilise les méthodes métier de la classe Equipement.
             switch (nouveauStatut)
             {
                 case StatutEquipement.EnService:
@@ -522,9 +530,7 @@ namespace GestionMaintenance.UI
 
                 var nouvelEquipement = formulaire.EquipementCree!;
 
-                AppliquerStatut(
-                    nouvelEquipement,
-                    formulaire.StatutSelectionne);
+                AppliquerStatut(nouvelEquipement, formulaire.StatutSelectionne);
 
                 db.Equipements.Add(nouvelEquipement);
                 db.SaveChanges();
@@ -589,9 +595,7 @@ namespace GestionMaintenance.UI
                 equipement.Localisation =
                     formulaire.EquipementCree.Localisation;
 
-                AppliquerStatut(
-                    equipement,
-                    formulaire.StatutSelectionne);
+                AppliquerStatut(equipement, formulaire.StatutSelectionne);
 
                 db.SaveChanges();
 
@@ -670,6 +674,267 @@ namespace GestionMaintenance.UI
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
+        }
+
+        // ================= EXPORTER PDF =================
+
+        private void BtnExporterPdf_Click(object? sender, EventArgs e)
+        {
+            var equipements = tableau.Rows
+                .Cast<DataGridViewRow>()
+                .Where(row => row.DataBoundItem is Equipement)
+                .Select(row => (Equipement)row.DataBoundItem!)
+                .ToList();
+
+            if (equipements.Count == 0)
+            {
+                MessageBox.Show(
+                    "Aucun équipement à exporter.",
+                    "Export PDF",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                return;
+            }
+
+            using SaveFileDialog dialogue = new SaveFileDialog
+            {
+                Title = "Enregistrer le rapport PDF",
+                Filter = "Fichier PDF (.pdf)|.pdf",
+                DefaultExt = "pdf",
+                AddExtension = true,
+                FileName = $"Rapport_Equipements_{DateTime.Now:yyyyMMdd_HHmm}.pdf"
+            };
+
+            if (dialogue.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            try
+            {
+                QuestPDF.Settings.License = LicenseType.Community;
+                QuestPDF.Settings.UseSystemFonts = true;
+
+                Document.Create(document =>
+                {
+                    document.Page(page =>
+                    {
+                        page.Size(PageSizes.A4.Landscape());
+                        page.Margin(25);
+
+                        page.DefaultTextStyle(x => x
+                            .FontFamily("Lato", "Arial")
+                            .FontSize(8));
+
+                        // En-tête du rapport
+                        page.Header().Column(column =>
+                        {
+                            column.Item()
+                                .Text("MAINTENANCE PRO")
+                                .FontSize(20)
+                                .Bold()
+                                .FontColor("#263746");
+
+                            column.Item()
+                                .Text("Rapport des équipements")
+                                .FontSize(13)
+                                .FontColor("#2563EB");
+
+                            column.Item()
+                                .Text($"Date du rapport : {DateTime.Now:dd/MM/yyyy HH:mm}")
+                                .FontSize(9);
+
+                            column.Item()
+                                .Text($"Nombre total d'équipements : {equipements.Count}")
+                                .FontSize(9)
+                                .Bold();
+
+                            column.Item()
+                                .PaddingVertical(5)
+                                .LineHorizontal(1)
+                                .LineColor("#D1D5DB");
+                        });
+
+                        // Tableau des équipements
+                        page.Content().Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn(1.1f);
+                                columns.RelativeColumn(1.5f);
+                                columns.RelativeColumn(1.1f);
+                                columns.RelativeColumn(1.4f);
+                                columns.RelativeColumn(1.2f);
+                                columns.RelativeColumn(0.9f);
+                                columns.RelativeColumn(1.2f);
+                                columns.RelativeColumn(1.2f);
+                            });
+
+                            table.Header(header =>
+                            {
+                                string[] titres =
+                                {
+                                    "Référence",
+                                    "Désignation",
+                                    "Marque",
+                                    "Localisation",
+                                    "Date acquisition",
+                                    "Coût",
+                                    "Spécialité",
+                                    "Statut"
+                                };
+
+                                foreach (string titre in titres)
+                                {
+                                    header.Cell()
+                                        .Element(CelluleEntete)
+                                        .Text(titre);
+                                }
+                            });
+
+                            foreach (var equipement in equipements)
+                            {
+                                table.Cell().Element(CelluleCorps)
+                                    .Text(FormatValeur(equipement.Reference));
+
+                                table.Cell().Element(CelluleCorps)
+                                    .Text(FormatValeur(equipement.Designation));
+
+                                table.Cell().Element(CelluleCorps)
+                                    .Text(FormatValeur(equipement.Marque));
+
+                                table.Cell().Element(CelluleCorps)
+                                    .Text(FormatValeur(equipement.Localisation));
+
+                                table.Cell().Element(CelluleCorps)
+                                    .Text(FormatDate(equipement.DateAcquisition));
+
+                                table.Cell().Element(CelluleCorps)
+                                    .Text(FormatCout(equipement.CoutAcquisition));
+
+                                table.Cell().Element(CelluleCorps)
+                                    .Text(FormatValeur(equipement.SpecialiteRequise));
+
+                                table.Cell().Element(CelluleCorps)
+                                    .Text(FormatValeur(equipement.Statut));
+                            }
+                        });
+
+                        // Pied de page
+                        page.Footer()
+                            .AlignRight()
+                            .Text(text =>
+                            {
+                                text.Span("Page ");
+                                text.CurrentPageNumber();
+                                text.Span(" / ");
+                                text.TotalPages();
+                            });
+                    });
+                }).GeneratePdf(dialogue.FileName);
+
+                // Vérifier que le PDF a bien été créé
+                if (!File.Exists(dialogue.FileName))
+                {
+                    MessageBox.Show(
+                        "Le fichier PDF n'a pas été trouvé après sa génération.",
+                        "Erreur",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+
+                    return;
+                }
+
+                // Confirmer la création
+                MessageBox.Show(
+                    "Le rapport PDF a été créé avec succès !\n\nEmplacement :\n"
+                    + dialogue.FileName,
+                    "Export réussi",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                // Ouvrir le PDF avec l'application associée à Windows
+                try
+                {
+                    System.Diagnostics.Process.Start(
+                        "explorer.exe",
+                        "\"" + dialogue.FileName + "\"");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        "Le PDF existe, mais son ouverture automatique a échoué.\n\n"
+                        + "Vous pouvez l'ouvrir manuellement depuis :\n"
+                        + dialogue.FileName
+                        + "\n\nDétail : " + ex.Message,
+                        "Ouverture du PDF",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Erreur lors de la génération du PDF :\n" + ex.Message,
+                    "Erreur",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        // ================= CONVERSIONS POUR LE PDF =================
+
+        private static string FormatValeur(object? valeur)
+        {
+            return valeur?.ToString() ?? "";
+        }
+
+        private static string FormatDate(object? valeur)
+        {
+            if (valeur == null)
+                return "";
+
+            if (DateTime.TryParse(valeur.ToString(), out DateTime date))
+                return date.ToString("dd/MM/yyyy");
+
+            return valeur.ToString() ?? "";
+        }
+
+        private static string FormatCout(object? valeur)
+        {
+            if (valeur == null)
+                return "";
+
+            if (decimal.TryParse(
+                valeur.ToString(),
+                System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out decimal cout))
+            {
+                return cout.ToString(
+                    "N2",
+                    System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+            }
+
+            return valeur.ToString() ?? "";
+        }
+
+        // ================= STYLE DU TABLEAU PDF =================
+
+        private static IContainer CelluleEntete(IContainer container)
+        {
+            return container
+                .Background("#263746")
+                .Padding(5)
+                .DefaultTextStyle(x =>
+                    x.FontColor(Colors.White).Bold());
+        }
+
+        private static IContainer CelluleCorps(IContainer container)
+        {
+            return container
+                .BorderBottom(0.5f)
+                .BorderColor("#D1D5DB")
+                .Padding(5);
         }
     }
 }
