@@ -1,4 +1,3 @@
-
 #nullable enable
 
 using System;
@@ -22,7 +21,6 @@ public class Equipement : IEntite
 
     public string Marque { get; set; }
 
-    // Corrigé : la localisation peut être modifiée depuis Form1.
     public string Localisation { get; set; }
 
     public DateTime DateAcquisition { get; private set; }

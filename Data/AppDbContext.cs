@@ -14,13 +14,9 @@ namespace GestionMaintenance.Data
         // =========================================
 
         public DbSet<Equipement> Equipements { get; set; } = null!;
-
         public DbSet<Technicien> Techniciens { get; set; } = null!;
-
         public DbSet<PieceDetachee> PiecesDetachees { get; set; } = null!;
-
         public DbSet<Intervention> Interventions { get; set; } = null!;
-
 
         // =========================================
         // CONFIGURATION DES ENTITES
@@ -30,7 +26,6 @@ namespace GestionMaintenance.Data
         {
             base.OnModelCreating(modelBuilder);
 
-
             // =========================================
             // PERSONNES ET TECHNICIENS
             // =========================================
@@ -38,19 +33,15 @@ namespace GestionMaintenance.Data
             modelBuilder.Entity<Personne>(entity =>
             {
                 entity.HasKey(p => p.Id);
-
                 entity.ToTable("Personnes");
-
                 entity.Ignore(p => p.NomComplet);
             });
 
             modelBuilder.Entity<Technicien>(entity =>
             {
                 entity.ToTable("Personnes");
-
                 entity.Ignore(t => t.Planning);
             });
-
 
             // =========================================
             // EQUIPEMENTS
@@ -71,9 +62,9 @@ namespace GestionMaintenance.Data
                 entity.Property(e => e.Designation)
                       .IsRequired();
 
+                // Navigation non enregistrée directement
                 entity.Ignore(e => e.Interventions);
             });
-
 
             // =========================================
             // PIECES DETACHEES
@@ -92,7 +83,6 @@ namespace GestionMaintenance.Data
                       .IsRequired();
             });
 
-
             // =========================================
             // INTERVENTIONS
             // =========================================
@@ -103,7 +93,7 @@ namespace GestionMaintenance.Data
 
                 entity.HasKey(i => i.Id);
 
-                // Héritage TPH : une seule table pour les deux types
+                // Héritage TPH
                 entity.HasDiscriminator<string>("Discriminator")
                       .HasValue<InterventionPreventive>("PREVENTIVE")
                       .HasValue<InterventionCorrective>("CORRECTIVE");
@@ -124,7 +114,6 @@ namespace GestionMaintenance.Data
                 entity.Ignore(i => i.Technicien);
                 entity.Ignore(i => i.PlanifieePar);
             });
-
 
             // =========================================
             // PROPRIETES DES CLASSES FILLES
