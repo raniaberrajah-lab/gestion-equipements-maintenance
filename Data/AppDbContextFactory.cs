@@ -1,4 +1,3 @@
-
 using System;
 using System.IO;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +10,12 @@ namespace GestionMaintenance.Data
     {
         public AppDbContext CreateDbContext(string[] args)
         {
-            string dossierProjet = Directory.GetCurrentDirectory();
+            string dossierProjet = Path.GetFullPath(
+                Path.Combine(
+                    AppContext.BaseDirectory,
+                    "..", "..", "..", ".."
+                )
+            );
 
             string cheminBD = Path.Combine(
                 dossierProjet,
@@ -21,9 +25,7 @@ namespace GestionMaintenance.Data
             var optionsBuilder =
                 new DbContextOptionsBuilder<AppDbContext>();
 
-            optionsBuilder.UseSqlite(
-                $"Data Source={cheminBD}"
-            );
+            optionsBuilder.UseSqlite($"Data Source={cheminBD}");
 
             return new AppDbContext(optionsBuilder.Options);
         }
